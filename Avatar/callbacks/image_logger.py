@@ -18,6 +18,7 @@ class ImageLogger:
 
     def _make_grid(self, images, normalize=False):
         grid = torchvision.utils.make_grid(images, 4)
+        # normalize= False
         grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
         grid = grid.detach().cpu().numpy()
         if normalize:
@@ -79,7 +80,7 @@ class ImageLogger:
 
             image_list = []
             for key_name in keys_to_save:
-                print(key_name)
+            
                 image = batch[key_name][id]
                 sub_folder = os.path.join(save_folder, key_name)
                 os.makedirs(sub_folder, exist_ok=True)
@@ -95,22 +96,23 @@ class ImageLogger:
             pred_rgb = torch.permute(batch["rasterization"][id], (1, 2, 0))
             rgb_gt = torch.permute(batch["rgb_image"][id], (1, 2, 0))
 
-            # Save error map
-            errmap = (pred_rgb - rgb_gt).square().sum(-1).sqrt().cpu().numpy() / np.sqrt(3)
-            errmap = cv2.applyColorMap((errmap * 255).astype(np.uint8), cv2.COLORMAP_JET)
-            image_list.append(errmap[..., ::-1])
-            result = cv2.hconcat(image_list)
-            cv2.imwrite(os.path.join(sub_folder, filename), result[..., ::-1])
+            # # Save error map
+            # errmap = (pred_rgb - rgb_gt).square().sum(-1).sqrt().cpu().numpy() / np.sqrt(3)
+            # errmap = cv2.applyColorMap((errmap * 255).astype(np.uint8), cv2.COLORMAP_JET)
+            # image_list.append(errmap[..., ::-1])
+            # result = cv2.hconcat(image_list)
+            # cv2.imwrite(os.path.join(sub_folder, filename), result[..., ::-1])
 
             # TODO: store frames for gaussians-only and mesh-only
             self._video_frames.append(tensor_to_image(pred_rgb))
             self._gt_video_frames.append(tensor_to_image(rgb_gt))
 
-    def _visualize_images(self, batch):
+    def _visualize_images(self, batch,global_step):
         rasterization = self._make_grid(batch["rasterization"])
         rgb_image = self._make_grid(batch["rgb_image"])
         visualize = cv2.vconcat([rasterization, rgb_image])
-        cv2.imwrite("visalize.png", visualize[..., ::-1])
+        cv2.imwrite("visalize_"
+                    +".png", visualize[..., ::-1])
 
     def _save_video(self, video_path, frames):
         result = VideoWriter(video_path, 10)
@@ -127,7 +129,7 @@ class ImageLogger:
             outputs
     ):
         if (runner.global_step - 1) % self._visualize_step == 0:
-            self._visualize_images(outputs)
+            self._visualize_images(outputs,runner.global_step)
 
     def on_validation_batch_end(
             self,

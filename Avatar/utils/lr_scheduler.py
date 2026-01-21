@@ -20,7 +20,7 @@ class ExponentialLRxyz(ExponentialLR):
         self._start_value = start_value
         self._stop_value = stop_value
         self._group_name = group_name
-        super().__init__(optimizer, 0, -1, verbose)
+        super().__init__(optimizer, 0, -1)
 
     def get_lr(self):
         if not self._get_lr_called_within_step:

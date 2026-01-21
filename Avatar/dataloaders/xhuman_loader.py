@@ -85,7 +85,7 @@ class DataLoader(torch.utils.data.Dataset):
             self._pid_camera_map[int(pid)] = num
 
     def load_sample(self, pid):
-        self._masks_path_new = os.path.join(self.data_root, "render/mask")
+        self._masks_path_new = os.path.join(self.data_root, "render/mask/")
         rgb_image = cv2.imread(os.path.join(self._images_path, "color_{:06d}.png".format(pid)))
         H, W, _ = rgb_image.shape
         
@@ -112,16 +112,27 @@ class DataLoader(torch.utils.data.Dataset):
             background[1] *= background_color[1]
             background[2] *= background_color[2]
         flag = 'C'
-        file_path = os.path.join(self._masks_path_new, str(pid) + '.png')
-
+        #file_path = os.path.join(self._masks_path_new, "{:05d}".format(pid-1)+'_gray.png')
+        
+        file_path = os.path.join(self._masks_path_new, "{:05d}".format(pid)+'.png')
+        flag = True
         # if mask is provided: 
-        if  os.path.exists(file_path):
-
+        #if  os.path.exists(file_path):
+        if  flag :
             # For custrom data only 
-            mask_image = cv2.imread(os.path.join(self._masks_path_new, str(pid)+'.png'))
+            # print(os.path.join(self._masks_path_new, str(pid)+'.png'))
+            #mask_image = cv2.imread(os.path.join(self._masks_path_new, str(pid)+'.png'))
+
+            #print(os.path.join(self._masks_path_new, "{:05d}".format(pid-1)+'_gray.png'))
+            # print(pid)
+            mask_image = cv2.imread(os.path.join(self._masks_path_new, "{:05d}".format(pid)+'_gray.png'))
+            # print(os.path.join(self._masks_path_new, str(pid)+'.png'))
+            # mask_image = cv2.imread(os.path.join(self._masks_path_new, str(pid)+'.png'))
+
             mask_image = mask_image.astype(np.float32) / 255.0
             if len(mask_image.shape) > 2:
                 mask_image = mask_image[:, :, 0]
+
             mask_image = mask_image[vertical_offset:vertical_offset + W]
             mask_image = cv2.resize(mask_image, (self._render_size, self._render_size))
             mask_image = mask_image[None]
@@ -133,9 +144,9 @@ class DataLoader(torch.utils.data.Dataset):
                 smplx_params[k] = smplx_params[k]
                 #smplx_params[k] = smplx_params[k][None]
                 smplx_params[k] = np.expand_dims(np.array(smplx_params[k],dtype=np.float32), axis=0)
+
         # For Xhuman default data only 
         else :
-            #print("depth_{:06d}.tiff".format(pid))
             mask_image = cv2.imread(os.path.join(self._masks_path, "depth_{:06d}.tiff".format(pid)), -1)
             mask_image = mask_image[vertical_offset:vertical_offset + W]
             mask_image = cv2.resize(mask_image, (self._render_size, self._render_size))
@@ -157,8 +168,9 @@ class DataLoader(torch.utils.data.Dataset):
                 #smplx_params[k] = smplx_params[k][None]
                 smplx_params[k] = np.expand_dims(np.array(smplx_params[k],dtype=np.float32), axis=0)
 
-
-
+        
+        
+      
         a = self._pid_camera_map[pid]
         #print(len(self._camera_params["extrinsic"]))
         smplx_params["camera_matrix"] = K_to_camera_matrix(self._camera_params["intrinsic"], W, H)

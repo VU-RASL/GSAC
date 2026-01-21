@@ -21,14 +21,7 @@ class PerceptualLoss(torch.nn.Module):
                                   TrainingStage.INIT_TEXTURE]:
             return 0
         if training_stage in [TrainingStage.FINETUNE_TEXTURE,
-                              TrainingStage.INIT_TEXTURE,
-                              
-                              TrainingStage.OPTIMIZE_OPACITY,
-                              TrainingStage.OPTIMIZE_GAUSSIANS,
-                              
-                              
-                              
-                              ]:
+                              TrainingStage.INIT_TEXTURE]:
             use_mask = True
         else:
             use_mask = False
@@ -36,6 +29,15 @@ class PerceptualLoss(torch.nn.Module):
         synth_images = data_dict["rasterization"]
         target_images = data_dict["rgb_image"]
         lossmask = get_lossmask(data_dict["merged_mask"][:, 0:1, ...], data_dict["mask_image"])
+        mask = data_dict["mask_image"]
+        # # updated lpips lose
+        # bg_color_lpips = torch.rand_like(target_images)
+        # synth_images = synth_images * mask + bg_color_lpips * (1-mask)
+        # target_images = target_images * mask + bg_color_lpips *(1-mask)
+
+
+
+
 
         sub_synth = []
         sub_target = []

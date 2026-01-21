@@ -96,6 +96,8 @@ def pass_smplx_dict(smplx_params_dict, smplx_model, device):
                 smplx_input[k] = torch.FloatTensor(v).to(device)
             else:
                 smplx_input[k] = v.to(device)
+              
+
 
     smplx_output = smplx_model(**smplx_input)
     vertices = smplx_output.vertices

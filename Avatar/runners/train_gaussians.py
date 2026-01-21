@@ -22,7 +22,9 @@ from utils.general import instantiate_from_config, q_normalize, s_act, o_act, s_
 from utils.lr_scheduler import ExponentialLRxyz
 from utils.optimizer_utils import cat_tensors_to_optimizer, prune_optimizer
 from utils.rasterizer import NVDiffrast
-
+import trimesh
+import cv2
+import numpy as np
 from pytorch3d.ops import knn_points
 from plyfile import PlyData, PlyElement
 
@@ -751,14 +753,11 @@ class TextureAndGaussianTrainer(nn.Module):
             # print(predicted_parameters["gaussians_xyz"].shape)
             # print(predicted_parameters["gaussians_rotations"].shape)
             # print(predicted_parameters["gaussians_opacity"].shape)
-            # print(predicted_parameters["gaussians_colors"].shape)
+            print(predicted_parameters["gaussians_colors"].shape)
             # print(predicted_parameters["gaussians_scales"].shape)
-           
 
-        
-        
 
-            #self.save_ply(path = self.save_path_ply,
+                    #self.save_ply(path = self.save_path_ply,
             #          xyz = predicted_parameters["gaussians_xyz"][0],
             #          color = predicted_parameters["gaussians_colors"][0],
             #          opacity= predicted_parameters["gaussians_opacity"][0],
@@ -854,19 +853,120 @@ class TextureAndGaussianTrainer(nn.Module):
             opt_params['lr'] = self._tto_pose_lr
             opt_params = next(item for item in optimizer.param_groups if item["name"] == "smplx_pose_params_hf")
             opt_params['lr'] = self._tto_pose_lr / self._pose_hf_scale
-
     def _render_frame(self, data_dict, training_stage, optimize_pose=True, rotate_angle=None):
-        data_dict.update(self.predict_smplx_vertices(
+        prediced_result = self.predict_smplx_vertices(
             data_dict,
             optimize_pose=optimize_pose,
             calc_gaussians=training_stage in [TrainingStage.OPTIMIZE_GAUSSIANS,
                                               TrainingStage.OPTIMIZE_OPACITY,
                                               TrainingStage.FINETUNE_POSE],
             rotate_angle=rotate_angle,
-        ))
+        )
+        
+           
+         
+
+
+        data_dict.update(prediced_result)
         data_dict["texture"] = self._trainable_texture
         data_dict.update(self._rasterizer(data_dict))
+        print("Do training")
+        if training_stage == TrainingStage.INIT_TEXTURE:
+            # Train only texture
+            data_dict["rasterization"] = data_dict["mesh_rasterization"]
+            data_dict["merged_mask"] = data_dict["mask_uv"]
+            background = data_dict["background"]
+            alpha = data_dict["merged_mask"]
+            data_dict["rasterization"] = data_dict["rasterization"] * alpha + (1 - alpha) * background
 
+        elif training_stage in [TrainingStage.OPTIMIZE_GAUSSIANS]:
+            # Train only gaussians
+            INF_FAR = 1000
+            data_dict["mesh_depth"] = torch.ones_like(data_dict["background"]) * INF_FAR
+            #for i in data_dict:
+            #    print(i, data_dict[i].shape)
+            #print(Test)
+            data_dict.update(self._gaussian_rasterizer(data_dict))
+            data_dict["rasterization"] = data_dict["gaussian_rasterization"]
+            data_dict["merged_mask"] = data_dict["gaussian_alpha"]
+
+        elif training_stage == TrainingStage.FINETUNE_TEXTURE:
+            # Train only texture
+            data_dict["rasterization"] = data_dict["mesh_rasterization"]
+            data_dict["merged_mask"] = data_dict["mask_uv"]
+            background = data_dict["background"]
+            alpha = data_dict["merged_mask"]
+            data_dict["rasterization"] = data_dict["rasterization"] * alpha + (1 - alpha) * background
+
+        elif training_stage in [TrainingStage.OPTIMIZE_OPACITY, TrainingStage.FINETUNE_POSE]:
+            # Train texture and gaussians
+            alpha = data_dict["mask_uv"]
+            background = data_dict["background"]
+            with torch.no_grad():
+                data_dict["background"] = data_dict["mesh_rasterization"] * alpha + (1 - alpha) * background
+            data_dict.update(self._gaussian_rasterizer(data_dict))
+            data_dict.update(self._mix_rasterizations(data_dict))
+    def _render_frame_uv(self, data_dict, training_stage, optimize_pose=True, rotate_angle=None):
+        prediced_result = self.predict_smplx_vertices(
+            data_dict,
+            optimize_pose=optimize_pose,
+            calc_gaussians=training_stage in [TrainingStage.OPTIMIZE_GAUSSIANS,
+                                              TrainingStage.OPTIMIZE_OPACITY,
+                                              TrainingStage.FINETUNE_POSE],
+            rotate_angle=rotate_angle,
+        )
+        # for pid in data_dict['pid']:
+        #     print(pid)
+           
+        img_size = 1024
+        predicted_colors = prediced_result["gaussians_colors"]
+        B, N, _ = predicted_colors.shape
+
+        template = trimesh.load("metadata/smplx_uv.obj", process=False)
+        uvs = template.visual.uv             # shape: (10475, 2)
+        faces = template.faces 
+        
+
+        uv_image_template = cv2.imread("metadata/smplx_uv.png")   # shape: (H, W, 3)
+
+        h, w = uv_image_template.shape[:2]
+
+            # Convert UVs to pixel coordinates
+        uv_pixels = uvs.copy()
+        uv_pixels[:, 0] *= (w - 1)
+        uv_pixels[:, 1] = (1.0 - uv_pixels[:, 1]) * (h - 1)
+
+            # Build face → list of gaussians
+        face_to_gaussians = defaultdict(list)
+        for gaussian_idx, face_idx in enumerate(self._gaussian_to_face):
+            face_to_gaussians[int(face_idx)].append(gaussian_idx)
+
+        # # Paint UV maps per batch
+        # for b in tqdm(range(B), desc="Saving UV maps"):
+        #     uv_map = np.zeros((img_size, img_size, 3), dtype=np.uint8)
+        #     pid = data_dict['pid'][b]
+        #     for face_idx in range(len(faces)):
+        #         gaussian_ids = face_to_gaussians.get(face_idx, [])
+        #         if not gaussian_ids:
+        #             continue
+
+        #         colors = predicted_colors[b, gaussian_ids]  # torch tensor (num_gaussians, 3)
+        #         mean_color = torch.clamp(colors.mean(dim=0), 0, 1) * 255
+        #         color = tuple(int(c.item()) for c in mean_color)
+
+        #         pts = uv_pixels[faces[face_idx]].astype(np.int32).reshape((-1, 1, 2))
+        #         bgr_color = (color[2], color[1], color[0])  # RGB → BGR
+        #         cv2.fillConvexPoly(uv_map, pts, bgr_color)
+
+        #     filename = "s{:06}_b{}.png".format(self.global_step, pid)
+        #     cv2.imwrite(os.path.join('metadata/render', filename), uv_map)
+        
+
+
+        data_dict.update(prediced_result)
+        data_dict["texture"] = self._trainable_texture
+        data_dict.update(self._rasterizer(data_dict))
+        print("Do training")
         if training_stage == TrainingStage.INIT_TEXTURE:
             # Train only texture
             data_dict["rasterization"] = data_dict["mesh_rasterization"]
@@ -1086,9 +1186,22 @@ class TextureAndGaussianTrainer(nn.Module):
         train_batch = dict2device(train_batch, self.device)
         loss = 0
         self._render_frame(train_batch, training_stage)
-        gt_image =train_batch["rgb_image"]
-        render_image = train_batch["rasterization"]
+        
+        # gt_image = train_batch["rgb_image"]
+        # render_image = train_batch["rasterization"]
+        # predict_mask = (render_image.abs().sum(dim=1, keepdim=True) > 0).float()
+        # mask_image = train_batch["mask_image"]
+        # criterion = nn.BCELoss()
 
+
+        # def iou_loss(pred_mask, gt_mask, eps=1e-6):
+        #     # Both should be float tensors in [0, 1], shape: [B, 1, H, W]
+        #     intersection = (pred_mask * gt_mask).sum(dim=(1, 2, 3))
+        #     union = (pred_mask + gt_mask - pred_mask * gt_mask).sum(dim=(1, 2, 3))
+        #     iou = (intersection + eps) / (union + eps)
+        #     return 1 - iou.mean()  # IoU Loss
+
+        # L_sil = criterion(predict_mask, mask_image)
         for criterion_name, criterion in self._criteria.items():
             local_loss = criterion(train_batch, training_stage=training_stage)
             loss += local_loss
@@ -1098,13 +1211,14 @@ class TextureAndGaussianTrainer(nn.Module):
 
         if self.global_step % self._logging_frequency == 0:
             self.log('monitoring_step', self.global_step)
+        # loss += 0.1*iou_loss(predict_mask, mask_image)
         return loss, train_batch
 
     @torch.no_grad()
     def validation_step(self, val_batch, training_stage):
         metrics = {}
         val_batch = dict2device(val_batch, self.device)
-        self._render_frame(val_batch, training_stage, optimize_pose=False)
+        self._render_frame_uv(val_batch, training_stage, optimize_pose=False)
 
         for criterion_name, criterion in self._criteria.items():
             local_loss = criterion(val_batch, training_stage=training_stage)

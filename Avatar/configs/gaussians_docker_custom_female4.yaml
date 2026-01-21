@@ -87,7 +87,7 @@ train_dataloader:
     use_hashing: False
     render_size: 1080
     random_background: True
-    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/Custom_female4
+    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/Custom_female4_correct
 
 val_dataloader:
   batch_size: 4
@@ -98,7 +98,7 @@ val_dataloader:
   params:
     render_size: 1080
     #data_root: /mounted/home/dresden/repositories/HAHA/data/PeopleSnapshot_SMPLX/male-3-casual-test
-    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/Custom_female4_test
+    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/Custom_female4_test_correct
 
 test_dataloader:
   batch_size: 1

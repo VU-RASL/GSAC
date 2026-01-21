@@ -8,10 +8,10 @@ import json
 
 class DataLogger:
     def __init__(self, tpath, apath, cpath):
-        # self.T = self.load_pose(tpath, "T")
-        # self.A = self.load_pose(apath, "A")
-        # self.C = self.load_pose(cpath, "C")
-        self.T =0
+        self.T = self.load_pose(tpath, "T")
+        self.A = self.load_pose(apath, "A")
+        self.C = self.load_pose(cpath, "C")
+
     def load_pose(self, path, name):
         camera_matrix = torch.tensor([[[4.9270 * 3, 0.0000, -0.0519, 0.0000],
                                        [0.0000, 4.9415 * 3, 0.0000, 0.0000],
@@ -22,8 +22,8 @@ class DataLogger:
                                           [0., 0., 1., 15.2122],
                                           [0., 0., 0., 1.]]], device="cuda")
 
-        # with open(path, 'r') as f:
-        #     data = json.load(f)
+        with open(path, 'r') as f:
+            data = json.load(f)
 
         smplx_params = {}
         smplx_params["name"] = name

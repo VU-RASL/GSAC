@@ -32,16 +32,6 @@ def get_parser(**parser_kwargs):
         default=list(),
     )
     parser.add_argument(
-        "-g",
-        "--gender",
-        default='male',
-    )
-    parser.add_argument(
-        "--train_subject",
-        default='',
-    )
-
-    parser.add_argument(
         "-t",
         "--test_mode",
         action='store_true',
@@ -111,7 +101,7 @@ def setup_tensorboard_logger(runner, config, opt, sequence_name):
     log_dir = generate_path_to_logs(config, opt, sequence_name)
     if opt.test_mode:
         log_dir += '-test'
-    os.makedirs(log_dir, exist_ok=False)
+    os.makedirs(log_dir, exist_ok=True)
     runner.logger = SummaryWriter(log_dir)
 
 
@@ -126,25 +116,14 @@ def main(args):
     parser = get_parser()
 
     opt, unknown = parser.parse_known_args(args)
-    
-    configs = [OmegaConf.load(cfg) for cfg in opt.base]
 
+    configs = [OmegaConf.load(cfg) for cfg in opt.base]
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
-    print(os.getcwd())
-    gasc_path = os.path.dirname(os.getcwd())
-    print(gasc_path)
-    config.runner.params.gender = opt.gender
-    if opt.train_subject != '' :
-        train_path = gasc_path + '/Data/' + opt.train_subject + '/train/'
-        config.train_dataloader.params.data_root = train_path
-        config.val_dataloader.params.data_root = train_path
-
-    model_path = gasc_path + '/Preprocessor/common/utils/human_model_files/'
-    config.runner.params.smplx_path = model_path
 
     runner = instantiate_from_config(config.runner)
     runner.to(runner.device)
+
     setup_callbacks(runner, config)
 
     if opt.pretrained:
@@ -155,7 +134,7 @@ def main(args):
         setup_tensorboard_logger(runner, config, opt, test_dataset.sequence_name)
 
         runner.initialize_optimizable_pose(test_dataset)
-        #runner.fit_pose(test_dataloader)
+        # runner.fit_pose(test_dataloader)
         runner.test(test_dataloader)
     else:
         train_dataset, train_dataloader, val_dataloader = create_train_val_datasets(config)

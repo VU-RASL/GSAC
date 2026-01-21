@@ -67,7 +67,7 @@ def get_parser(**parser_kwargs):
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    device = "cuda"
+    device = "cpu"
 
     imgs_gt = load_images(args.ground_truth, device)
     imgs = load_images(args.predict, device)

@@ -5,7 +5,7 @@ from glob import glob
 import cv2
 import numpy as np
 import torch
-
+import smplx 
 
 def path_to_id(path):
     filename = path.split('/')[-1]
@@ -45,6 +45,7 @@ class DataLoader(torch.utils.data.Dataset):
         self._data_hash = {}
 
         self.sequence_name = data_root.split('/')[-1].split('-test')[0]
+        
 
     def load_sample(self, pid):
         rgb_image = cv2.imread(os.path.join(self._images_path, pid + ".png"))[..., ::-1]
@@ -81,9 +82,9 @@ class DataLoader(torch.utils.data.Dataset):
 
         # Load pickle
         smplx_filename = os.path.join(self._smplx_path, pid, "000.pkl")
+        #print(pid,smplx_filename)
         with open(smplx_filename, "rb") as f:
             smplx_params = pickle.load(f)
-
         return {
             "pid": pid,
             "rgb_image": rgb_image,
