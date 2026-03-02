@@ -1,118 +1,85 @@
-logdir: ./logs
+callbacks:
+  image_logger:
+    params:
+      visualize_step: 100
+    target: callbacks.image_logger.ImageLogger
 flush_log_secs: 120
 log_every_n_steps: 10
-val_check_interval: 1.0
-
+logdir: ./logs
 runner:
-  target: runners.train_gaussians.TextureAndGaussianTrainer
   params:
-    gender: "male"
-    lr_texture: 0.01
     color_lr: 0.005
-    position_lr: 0.00016
-    final_position_lr: 0.0000016
-    opacity_lr: 0.05
-    scaling_lr: 0.005
-    rotation_lr: 0.005
-    pose_lr: 0.0002
-    min_s_value: 0.0
-    max_s_value: 0.1
-
-    gaussians_optimize_steps: 3000
-    texture_optimize_steps: 2500
-    opacity_optimize_steps: 5000
-
+    criteria_config:
+      knn_reg:
+        params:
+          weight: 0.01
+        target: criteria.gaussians_reg.KNNReg
+      l2_loss:
+        params:
+          weight: 1.0
+        target: criteria.l2_loss.L2Loss
+      opacity_reg:
+        params:
+          weight: 0.001
+        target: criteria.gaussians_reg.OpacityReg
+      perceptual_loss:
+        params:
+          weight: 0.01
+        target: criteria.perceptual_loss.PerceptualLoss
+      segmentation_loss:
+        params:
+          weight: 0.1
+        target: criteria.dice_loss.DiceLoss
+      sobel_loss:
+        params:
+          weight: 1.0
+        target: criteria.sobel_loss.SobelLoss
+      ssim_loss:
+        params:
+          weight: 0.1
+        target: criteria.ssim_loss.SSIMLoss
+      tv_loss:
+        params:
+          weight: 0.01
+        target: criteria.tv_loss.TVLoss
     densify_start: 100
     densify_step: 201
     densify_stop: 2500
-
+    final_position_lr: 1.6e-06
+    gaussians_optimize_steps: 3000
+    gender: male
+    lr_texture: 0.01
+    max_s_value: 0.1
+    min_s_value: 0.0
+    opacity_lr: 0.05
+    opacity_optimize_steps: 5000
+    pose_lr: 0.0002
+    position_lr: 0.00016
     prune_start: 0
     prune_step: 201
     prune_stop: 100000
-
     render_size: 1080
-    texture_size: 512
+    rotation_lr: 0.005
+    scaling_lr: 0.005
     smplx_path: /mounted/home/dresden/repositories/HAHA/data
-    use_pca_for_hands: False
-
-    criteria_config:
-      l2_loss:
-        target: criteria.l2_loss.L2Loss
-        params:
-          weight: 1.
-
-      perceptual_loss:
-        target: criteria.perceptual_loss.PerceptualLoss
-        params:
-          weight: 0.01
-              #originally 0.01
-      ssim_loss:
-        target: criteria.ssim_loss.SSIMLoss
-        params:
-          weight: 0.1
-
-      sobel_loss:
-        target: criteria.sobel_loss.SobelLoss
-        params:
-          weight: 1.0
-
-      # To make gaussians properties uniform
-      knn_reg:
-        target: criteria.gaussians_reg.KNNReg
-        params:
-          weight: 0.01
-
-      # To make unnecessary Gaussians disappear
-      opacity_reg:
-        target: criteria.gaussians_reg.OpacityReg
-        params:
-          weight: 0.001
-
-      segmentation_loss:
-        target: criteria.dice_loss.DiceLoss
-        params:
-          weight: 0.1
-
-      tv_loss:
-        target: criteria.tv_loss.TVLoss
-        params:
-          weight: 0.01
-
-
+    texture_optimize_steps: 2500
+    texture_size: 512
+    use_pca_for_hands: false
+  target: runners.train_gaussians.TextureAndGaussianTrainer
 train_dataloader:
   batch_size: 4
   num_workers: 4
-  target: dataloaders.custom_loader.DataLoader
   params:
-    use_hashing: False
+    data_root: /mounted/home/dresden/repositories/debug/GSAC/Data/v0302/train/
+    random_background: true
     render_size: 1080
-    random_background: True
-    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/rendong_1080_1080
-
+    use_hashing: false
+  target: dataloaders.custom_loader.DataLoader
+val_check_interval: 1.0
 val_dataloader:
   batch_size: 4
   num_workers: 4
-  #target: dataloaders.smplx_loader_no_pca.DataLoader
+  params:
+    data_root: /mounted/home/dresden/repositories/debug/GSAC/Data/v0302/train/
+    render_size: 1080
   target: dataloaders.custom_loader.DataLoader
-
-  params:
-    render_size: 1080
-    #data_root: /mounted/home/dresden/repositories/HAHA/data/PeopleSnapshot_SMPLX/male-3-casual-test
-    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/rendong_1080_1080
-
-test_dataloader:
-  batch_size: 1
-  num_workers: 4
-  target: dataloaders.xhuman_loader.DataLoader
-  #target: dataloaders.smplx_loader_no_pca.DataLoader
-
-  params:
-    render_size: 1080
-    white_background: False
-    data_root: /mounted/home/dresden/repositories/HAHA/data/Customdata/Custom_male3_test_same_mask
-    #data_root: /mounted/home/dresden/repositories/HAHA/data/PeopleSnapshot_SMPLX/male-3-casual-test
-callbacks:
-  image_logger:
-    target: callbacks.image_logger.ImageLogger
-    params:
-      visualize_step: 100

@@ -8,6 +8,8 @@ import subprocess
 import os
 from pathlib import Path
 import numpy as np
+import yaml
+
 import cv2
 def get_video(directory):
     # Common video file extensions
@@ -116,10 +118,29 @@ print( "          Preprocessor Job Done.")
 print( " ")
 print( "#############################################")
 
-############################################# Avatar #########################################
+############################################ Avatar #########################################
 
-os.chdir('../Avatar')
-# os.chdir('Avatar')
+os.chdir('../')
+new_data_root = os.getcwd() + '/Data/'+subject_id +"/train/"
+
+os.chdir('Avatar')
+
+
+# new_data_root = os.getcwd() + '/Data/'+subject_id
+print(new_data_root)
+# Path to yaml file
+yaml_path = os.getcwd()  + "/configs/GSAC_custom.yaml"
+print(yaml_path)
+# Load yaml
+with open(yaml_path, "r") as f:
+    config = yaml.safe_load(f)
+
+# Modify train data_root
+config["train_dataloader"]["params"]["data_root"] = new_data_root
+config["val_dataloader"]["params"]["data_root"] = new_data_root
+
+with open(yaml_path, "w") as f:
+    yaml.dump(config, f, default_flow_style=False)
 
 cmd = ' python main.py --base=./configs/GSAC_custom.yaml  --gender ' +  gender + ' ' +  '--train_subject ' + subject_id
 
@@ -132,27 +153,27 @@ print( "          Avatar Creator Job Done.")
 print( " ")
 print( "#############################################")
 
-############################################# Move result to correct place #########################################
+# ############################################# Move result to correct place #########################################
 
-# MV the latest result to Data/Subject
+# # MV the latest result to Data/Subject
 
 
-log_dir = os.getcwd()+ "/logs/GSAC_custom/"
+# log_dir = os.getcwd()+ "/logs/GSAC_custom/"
 
-# Get all subdirectories inside the test-time directory
-subdirs = [d for d in Path(log_dir).iterdir() if d.is_dir()]
+# # Get all subdirectories inside the test-time directory
+# subdirs = [d for d in Path(log_dir).iterdir() if d.is_dir()]
 
-# Find the latest folder based on modification time
-if subdirs:
-    latest_folder = max(subdirs, key=lambda d: d.stat().st_mtime)
-    print("Latest folder:", latest_folder)
-else:
-    print("No folders found in", log_dir)
-os.chdir('..')
+# # Find the latest folder based on modification time
+# if subdirs:
+#     latest_folder = max(subdirs, key=lambda d: d.stat().st_mtime)
+#     print("Latest folder:", latest_folder)
+# else:
+#     print("No folders found in", log_dir)
+# os.chdir('..')
 
-source_path = os.path.join(os.getcwd()+'/Avatar/',log_dir,latest_folder)
-target_path =os.path.join(os.getcwd() + '/Data/',subject_id)
-cmd = 'mv ' + source_path + ' ' + target_path
-result = os.system(cmd)
+# source_path = os.path.join(os.getcwd()+'/Avatar/',log_dir,latest_folder)
+# target_path =os.path.join(os.getcwd() + '/Data/',subject_id)
+# cmd = 'mv ' + source_path + ' ' + target_path
+# result = os.system(cmd)
 
 

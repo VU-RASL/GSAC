@@ -2,9 +2,9 @@ import subprocess
 import os
 import glob
 
-subject_id = 'subject_id'
+subject_id = 'v0302'
 
-video_path = "../Data/" + subject_id + "/input.MOV"  
+video_path = "../Data/" + subject_id + "/input.mov"  
 
 # Output folder
 output_folder = "../Data/"+subject_id+"/frames/"

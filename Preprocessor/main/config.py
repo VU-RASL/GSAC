@@ -3,7 +3,7 @@ import os.path as osp
 import sys
 
 class Config:
-    gender = 'female'
+    gender = 'male'
     ## fitting
     face_img_shape = (256, 256)
     proj_shape = (8, 8)
