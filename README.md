@@ -119,13 +119,14 @@ If you create an avatar of a person using this pipeline, please obtain permissio
 If you find our work useful, please cite:
 
 ~~~
-@misc{zhang2025gsacleveraginggaussiansplatting,
-      title={GSAC: Leveraging Gaussian Splatting for Photorealistic Avatar Creation with Unity Integration}, 
-      author={Rendong Zhang and Alexandra Watkins and Nilanjan Sarkar},
-      year={2025},
-      eprint={2504.12999},
-      archivePrefix={arXiv},
-      primaryClass={cs.GR},
-      url={https://arxiv.org/abs/2504.12999}, 
-}
+@INPROCEEDINGS{11172560,
+  author={Zhang, Rendong and Watkins, Alexandra and Sarkar, Nilanjan},
+  booktitle={2025 11th International Conference on Virtual Reality (ICVR)}, 
+  title={GSAC: Leveraging Gaussian Splatting for Photorealistic Avatar Creation with Unity Integration}, 
+  year={2025},
+  volume={},
+  number={},
+  pages={168-178},
+  keywords={Training;Solid modeling;Three-dimensional displays;Avatars;Telemedicine;Pipelines;Animation;User experience;Augmented reality;Videos;Photorealistic Avatar;Gaussian Splatting;Virtual Reality;Augmented Reality},
+  doi={10.1109/ICVR66534.2025.11172560}}
 ~~~
